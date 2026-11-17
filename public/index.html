@@ -176,6 +176,8 @@
   </main>
 
   <script>
+    const API_BASE_URL = "https://kishka-notes-api.onrender.com";
+
     const titleEl = document.getElementById("noteTitle");
     const contentEl = document.getElementById("noteContent");
     const statusEl = document.getElementById("statusText");
@@ -221,7 +223,7 @@
     }
 
     async function request(url, options = {}) {
-      const response = await fetch(url, {
+      const response = await fetch(API_BASE_URL + url, {
         ...options,
         headers: { "Content-Type": "application/json", ...(options.headers || {}) }
       });
@@ -264,7 +266,9 @@
 
           noteId = saved.id;
           expiresAt = saved.expiresAt;
-          history.replaceState({}, "", "/?id=" + encodeURIComponent(noteId));
+          const noteUrl = new URL(location.href);
+          noteUrl.searchParams.set("id", noteId);
+          history.replaceState({}, "", noteUrl.pathname + noteUrl.search + noteUrl.hash);
           docLabel.textContent = "Нотатка · " + noteId.slice(0, 8);
           setStatus("Збережено на сервері", "saved");
           updateExpiry();
@@ -276,7 +280,7 @@
             showNotice("Час зберігання цієї нотатки минув. Натисни «Нова нотатка», щоб створити іншу.");
           } else {
             setStatus("Не вдалося зберегти", "error");
-            showNotice("Не вдалося зв’язатися із сервером. Перевір підключення та спробуй зберегти ще раз.");
+            showNotice("Сервер збереження ще не підключений або прокидається. Спробуй ще раз за хвилину. Якщо помилка повторюється, перевір адресу API у налаштуваннях проєкту.");
           }
           throw error;
         }
@@ -320,7 +324,9 @@
           showNotice("Спочатку напиши щось у нотатці.");
           return;
         }
-        const link = location.origin + "/?id=" + encodeURIComponent(noteId);
+        const noteUrl = new URL(location.href);
+        noteUrl.searchParams.set("id", noteId);
+        const link = noteUrl.toString();
         await navigator.clipboard.writeText(link);
         showNotice("Посилання скопійовано. Кожен, хто має його, може відкрити й змінити цю нотатку.");
       } catch {}
@@ -332,7 +338,9 @@
       expiresAt = null;
       titleEl.value = "";
       contentEl.value = "";
-      history.replaceState({}, "", "/");
+      const cleanUrl = new URL(location.href);
+      cleanUrl.searchParams.delete("id");
+      history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
       docLabel.textContent = "Нова нотатка";
       setStatus("Ще не збережено");
       updateCount();
