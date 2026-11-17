@@ -1,0 +1,13 @@
+{
+  "name": "web-service-test-1",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lightweight server-side temporary notepad",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
