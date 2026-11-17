@@ -251,7 +251,7 @@
         return Promise.resolve(null);
       }
 
-      saveQueue = saveQueue.then(async () => {
+      const operation = saveQueue.catch(() => {}).then(async () => {
         setStatus("Зберігаю на сервері…");
         try {
           const saved = noteId
@@ -281,8 +281,8 @@
           throw error;
         }
       });
-
-      return saveQueue;
+      saveQueue = operation;
+      return operation;
     }
 
     async function loadNote(id) {
