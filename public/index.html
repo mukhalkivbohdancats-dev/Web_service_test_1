@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6fb">
+  <meta name="description" content="Легкий онлайн-блокнот із тимчасовим збереженням на сервері.">
+  <title>Kishka Notes — Блокнот</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f5fa;
+      --surface: rgba(255,255,255,.92);
+      --surface-soft: #f7f8fc;
+      --text: #202638;
+      --muted: #7b8498;
+      --line: #e7eaf1;
+      --accent: #6758e8;
+      --accent-dark: #5142d1;
+      --green: #16885a;
+      --red: #c44949;
+      --shadow: 0 18px 55px rgba(36,45,80,.09);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(117,101,240,.10), transparent 30%),
+        radial-gradient(circle at 90% 88%, rgba(76,165,220,.10), transparent 28%),
+        var(--bg);
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    button, input, textarea { font: inherit; }
+    .app { width: min(1040px, 100%); margin: 0 auto; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; margin-bottom: 22px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo {
+      width: 44px; height: 44px; display: grid; place-items: center;
+      border-radius: 14px; color: white; font-size: 20px; font-weight: 800;
+      background: linear-gradient(145deg, #8476fa, #5949d6);
+      box-shadow: 0 8px 20px rgba(98,82,222,.25);
+    }
+    .brand h1 { margin: 0; font-size: 19px; letter-spacing: -.4px; }
+    .brand p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .server-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px;
+      background: rgba(255,255,255,.7); color: #536075; font-size: 12px;
+      white-space: nowrap;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #21ad75; }
+    .layout { display: grid; grid-template-columns: 245px minmax(0,1fr); gap: 18px; }
+    .panel, .editor-card {
+      border: 1px solid rgba(225,229,239,.9); border-radius: 21px;
+      background: var(--surface); box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    .sidebar { padding: 20px; }
+    .side-title { margin: 2px 0 14px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .new-button, .primary, .secondary, .icon-button {
+      border: 0; cursor: pointer; transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+    button:active { transform: translateY(1px); }
+    .new-button {
+      width: 100%; padding: 12px 14px; border-radius: 12px; color: white;
+      background: var(--accent); font-weight: 650; text-align: left;
+      box-shadow: 0 7px 15px rgba(103,88,232,.18);
+    }
+    .new-button:hover, .primary:hover { background: var(--accent-dark); }
+    .hint {
+      margin-top: 18px; padding: 14px; border-radius: 13px;
+      background: var(--surface-soft); color: var(--muted); font-size: 12px; line-height: 1.6;
+    }
+    .hint strong { display: block; margin-bottom: 5px; color: #505a70; font-size: 12px; }
+    .editor-card { min-height: 610px; padding: 22px 24px 18px; display: flex; flex-direction: column; }
+    .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 17px; border-bottom: 1px solid var(--line); }
+    .doc-label { color: var(--muted); font-size: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .primary, .secondary {
+      padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 650;
+    }
+    .primary { color: white; background: var(--accent); }
+    .secondary { color: #586177; background: #f0f2f8; }
+    .secondary:hover { background: #e7eaf3; }
+    .title-input {
+      width: 100%; margin: 21px 0 10px; padding: 8px 0;
+      border: 0; outline: 0; color: var(--text); background: transparent;
+      font-size: clamp(22px, 4vw, 29px); font-weight: 750; letter-spacing: -.8px;
+    }
+    .title-input::placeholder { color: #b7bdca; }
+    .note-input {
+      flex: 1; width: 100%; min-height: 365px; resize: vertical;
+      padding: 12px 0; border: 0; outline: 0; color: #394257;
+      background: transparent; font-size: 15px; line-height: 1.85;
+    }
+    .note-input::placeholder { color: #a8afbf; }
+    .footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding-top: 13px; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: 11px;
+    }
+    .save-state { display: inline-flex; align-items: center; gap: 7px; }
+    .state-dot { width: 7px; height: 7px; border-radius: 50%; background: #b8bfcd; }
+    .state-dot.saved { background: #20a36d; }
+    .state-dot.error { background: var(--red); }
+    .timer { font-variant-numeric: tabular-nums; }
+    .notice {
+      display: none; margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+      color: #765c24; background: #fff8e9; font-size: 12px; line-height: 1.5;
+    }
+    .notice.show { display: block; }
+    @media (max-width: 720px) {
+      body { padding: 16px 12px; }
+      .topbar { align-items: flex-start; }
+      .server-chip { font-size: 0; padding: 10px; }
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { padding: 13px; }
+      .side-title, .hint { display: none; }
+      .editor-card { min-height: 70vh; padding: 16px; }
+      .editor-head { align-items: flex-start; flex-direction: column; }
+      .actions { width: 100%; }
+      .actions button { flex: 1; }
+      .note-input { min-height: 42vh; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">K</div>
+        <div>
+          <h1>Kishka Notes</h1>
+          <p>Легкий онлайн-блокнот</p>
+        </div>
+      </div>
+      <div class="server-chip"><span class="dot"></span> Тимчасове серверне збереження</div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel sidebar">
+        <div class="side-title">Робочий простір</div>
+        <button class="new-button" id="newNote">＋ &nbsp; Нова нотатка</button>
+        <div class="hint">
+          <strong>Як це працює</strong>
+          Натисни «Зберегти», щоб отримати посилання на нотатку. Кожен запис автоматично видаляється через 15 хвилин після останнього збереження.
+        </div>
+      </aside>
+
+      <section class="editor-card">
+        <div class="editor-head">
+          <div class="doc-label" id="docLabel">Нова нотатка</div>
+          <div class="actions">
+            <button class="secondary" id="copyLink" type="button">Копіювати посилання</button>
+            <button class="primary" id="saveNote" type="button">Зберегти</button>
+          </div>
+        </div>
+
+        <input id="noteTitle" class="title-input" maxlength="120" placeholder="Назва нотатки" autocomplete="off">
+        <textarea id="noteContent" class="note-input" maxlength="30000" placeholder="Почни писати тут..."></textarea>
+
+        <div class="footer">
+          <div class="save-state"><span class="state-dot" id="stateDot"></span><span id="statusText">Ще не збережено</span></div>
+          <div><span id="charCount">0</span> символів · <span class="timer" id="expiryText">15:00 після збереження</span></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="notice" id="notice" role="status"></div>
+  </main>
+
+  <script>
+    const titleEl = document.getElementById("noteTitle");
+    const contentEl = document.getElementById("noteContent");
+    const statusEl = document.getElementById("statusText");
+    const stateDot = document.getElementById("stateDot");
+    const expiryEl = document.getElementById("expiryText");
+    const countEl = document.getElementById("charCount");
+    const docLabel = document.getElementById("docLabel");
+    const notice = document.getElementById("notice");
+
+    let noteId = null;
+    let expiresAt = null;
+    let saveTimer = null;
+    let saveQueue = Promise.resolve();
+    let isLoading = false;
+
+    function setStatus(text, kind = "") {
+      statusEl.textContent = text;
+      stateDot.className = "state-dot" + (kind ? " " + kind : "");
+    }
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.classList.add("show");
+    }
+
+    function hideNotice() {
+      notice.classList.remove("show");
+    }
+
+    function updateCount() {
+      countEl.textContent = contentEl.value.length.toLocaleString("uk-UA");
+    }
+
+    function updateExpiry() {
+      if (!expiresAt) {
+        expiryEl.textContent = "15:00 після збереження";
+        return;
+      }
+      const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
+      const remainder = String(seconds % 60).padStart(2, "0");
+      expiryEl.textContent = seconds > 0 ? "видалення через " + minutes + ":" + remainder : "термін минув";
+    }
+
+    async function request(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(data.error || "Помилка сервера");
+        error.status = response.status;
+        throw error;
+      }
+      return data;
+    }
+
+    function scheduleSave() {
+      if (isLoading) return;
+      updateCount();
+      if (!titleEl.value.trim() && !contentEl.value.trim() && !noteId) return;
+      setStatus("Є незбережені зміни");
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveNow(), 850);
+    }
+
+    function saveNow() {
+      clearTimeout(saveTimer);
+      const snapshot = { title: titleEl.value, content: contentEl.value };
+      if (!snapshot.title.trim() && !snapshot.content.trim() && !noteId) {
+        setStatus("Ще не збережено");
+        return Promise.resolve(null);
+      }
+
+      saveQueue = saveQueue.then(async () => {
+        setStatus("Зберігаю на сервері…");
+        try {
+          const saved = noteId
+            ? await request("/api/notes/" + encodeURIComponent(noteId), {
+                method: "PUT", body: JSON.stringify(snapshot)
+              })
+            : await request("/api/notes", {
+                method: "POST", body: JSON.stringify(snapshot)
+              });
+
+          noteId = saved.id;
+          expiresAt = saved.expiresAt;
+          history.replaceState({}, "", "/?id=" + encodeURIComponent(noteId));
+          docLabel.textContent = "Нотатка · " + noteId.slice(0, 8);
+          setStatus("Збережено на сервері", "saved");
+          updateExpiry();
+          hideNotice();
+          return saved;
+        } catch (error) {
+          if (error.status === 404) {
+            setStatus("Нотатку вже видалено", "error");
+            showNotice("Час зберігання цієї нотатки минув. Натисни «Нова нотатка», щоб створити іншу.");
+          } else {
+            setStatus("Не вдалося зберегти", "error");
+            showNotice("Не вдалося зв’язатися із сервером. Перевір підключення та спробуй зберегти ще раз.");
+          }
+          throw error;
+        }
+      });
+
+      return saveQueue;
+    }
+
+    async function loadNote(id) {
+      isLoading = true;
+      setStatus("Завантажую нотатку…");
+      try {
+        const note = await request("/api/notes/" + encodeURIComponent(id));
+        noteId = note.id;
+        expiresAt = note.expiresAt;
+        titleEl.value = note.title;
+        contentEl.value = note.content;
+        docLabel.textContent = "Нотатка · " + noteId.slice(0, 8);
+        setStatus("Завантажено із сервера", "saved");
+        updateCount();
+        updateExpiry();
+      } catch {
+        noteId = null;
+        expiresAt = null;
+        setStatus("Нотатку не знайдено", "error");
+        showNotice("Це посилання недійсне або нотатка вже автоматично видалена.");
+        docLabel.textContent = "Нова нотатка";
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    document.getElementById("saveNote").addEventListener("click", () => {
+      saveNow().catch(() => {});
+    });
+
+    document.getElementById("copyLink").addEventListener("click", async () => {
+      try {
+        const saved = await saveNow();
+        if (!saved || !noteId) {
+          showNotice("Спочатку напиши щось у нотатці.");
+          return;
+        }
+        const link = location.origin + "/?id=" + encodeURIComponent(noteId);
+        await navigator.clipboard.writeText(link);
+        showNotice("Посилання скопійовано. Кожен, хто має його, може відкрити й змінити цю нотатку.");
+      } catch {}
+    });
+
+    document.getElementById("newNote").addEventListener("click", () => {
+      clearTimeout(saveTimer);
+      noteId = null;
+      expiresAt = null;
+      titleEl.value = "";
+      contentEl.value = "";
+      history.replaceState({}, "", "/");
+      docLabel.textContent = "Нова нотатка";
+      setStatus("Ще не збережено");
+      updateCount();
+      updateExpiry();
+      hideNotice();
+      titleEl.focus();
+    });
+
+    titleEl.addEventListener("input", scheduleSave);
+    contentEl.addEventListener("input", scheduleSave);
+    setInterval(updateExpiry, 1000);
+    updateCount();
+
+    const initialId = new URLSearchParams(location.search).get("id");
+    if (initialId) loadNote(initialId);
+  </script>
+</body>
+</html>
