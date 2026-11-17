@@ -10,6 +10,7 @@ const MAX_BODY_BYTES = 64 * 1024;
 const MAX_TITLE_LENGTH = 120;
 const MAX_CONTENT_LENGTH = 30000;
 const PUBLIC_DIR = path.join(__dirname, "public");
+const ALLOWED_ORIGIN = "https://mukhalkivbohdancats-dev.github.io";
 
 // Temporary in-memory storage: no database and no files are written.
 const notes = new Map();
@@ -102,6 +103,18 @@ function serveApp(res) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = url.pathname;
+
+  // Allow the GitHub Pages frontend to call this API.
+  if (req.headers.origin === ALLOWED_ORIGIN) {
+    res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    return res.end();
+  }
 
   try {
     if (req.method === "GET" && pathname === "/api/health") {
